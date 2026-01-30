@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="windowTitle">
+   <string>Titration UI for Syringe</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <layout class="QHBoxLayout" name="topLayout">
+      <item>
+       <widget class="QLabel" name="lblPH">
+        <property name="text"><string>pH: --</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="lblTemp">
+        <property name="text"><string>Temperature: -- °C</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="lblVol">
+        <property name="text"><string>Volume: --</string></property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QWidget" name="plotContainer">
+      <property name="minimumSize">
+       <size><width>400</width><height>300</height></size>
+      </property>
+      <layout class="QVBoxLayout" name="plotLayout"/>
+     </widget>
+    </item>
+    <item>
+     <layout class="QGridLayout" name="btnGrid">
+      <item row="0" column="0">
+       <widget class="QPushButton" name="btnAspire">
+        <property name="text"><string>Aspire</string></property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QPushButton" name="btnDispense">
+        <property name="text"><string>Dispense</string></property>
+       </widget>
+      </item>
+      <item row="1" column="0" rowspan="2">
+       <widget class="QPushButton" name="btnStartPlotLogging">
+        <property name="text"><string>Start Plot and Save Data</string></property>
+        <property name="minimumSize">
+         <size><width>0</width><height>40</height></size>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QPushButton" name="btnStopLogging">
+        <property name="text"><string>Stop Saving</string></property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QPushButton" name="btnClearPlot">
+        <property name="text"><string>Clear Plot</string></property>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="2">
+       <widget class="QPushButton" name="btnOpenChat">
+        <property name="text"><string>AI Assistant</string></property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- Chat dialog placed inside the QMainWindow element -->
+  <widget class="QDialog" name="ChatDialog">
+   <property name="windowTitle"><string>AI Assistant</string></property>
+   <property name="windowModality"><enum>Qt::ApplicationModal</enum></property>
+   <property name="minimumSize">
+    <size><width>610</width><height>728</height></size>
+   </property>
+   <property name="size">
+    <size><width>650</width><height>1000</height></size>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout_chat">
+    <item>
+     <widget class="QLabel" name="lblPlotImage">
+      <property name="minimumSize"><size><width>610</width><height>328</height></size></property>
+      <property name="scaledContents"><bool>true</bool></property>
+      <property name="pixmap"><pixmap>/home/er/titration_logs/pH_plot.png</pixmap></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTextBrowser" name="chatOutput">
+      <property name="placeholderText"><string>AI Assistant response will appear here</string></property>
+      <property name="minimumSize"><size><width>610</width><height>600</height></size></property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="chatButtons">
+      <item>
+       <widget class="QPushButton" name="btnCloseChat">
+        <property name="text"><string>Close</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnChat">
+        <property name="text"><string>Chat</string></property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+
+  <!-- New standalone chatroom dialog -->
+  <widget class="QDialog" name="ChatRoomDialog">
+   <property name="windowTitle"><string>Chat Room</string></property>
+   <property name="minimumSize"><size><width>600</width><height>500</height></size></property>
+   <property name="size"><size><width>600</width><height>800</height></size></property>
+   <layout class="QVBoxLayout" name="verticalLayout_chatroom">
+    <item>
+     <widget class="QTextBrowser" name="chatRoomOutput">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>5</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize"><size><width>580</width><height>400</height></size></property>
+      <property name="stretch"><number>8</number></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTextEdit" name="chatRoomInput">
+      <property name="placeholderText"><string>Type a message...</string></property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize"><size><width>580</width><height>50</height></size></property>
+      <property name="stretch"><number>1</number></property>
+     </widget>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="chatRoomButtons">
+      <item>
+       <widget class="QPushButton" name="btnSendChat">
+        <property name="text"><string>Send</string></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnCloseChatRoom">
+        <property name="text"><string>Close</string></property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

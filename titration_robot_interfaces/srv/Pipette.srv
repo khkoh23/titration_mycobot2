@@ -1,0 +1,19 @@
+# Service for actuating and configuring the electronic pipette.
+# Note: Volume is updated only when the command is 71 or 91.
+
+# Request
+# 7: Aspire (Default: 200uL)
+# 71: Set aspire volume (Default: 2000)
+# 8: Clear Pipette
+# 9: Dispense (Default: 20uL)
+# 91: Set dispense volume (Default: 200)
+# 123: Enquire holding_volume
+# 124: Is to replenish pipette?
+int8 command
+uint16 aspire_volume
+uint16 dispense_volume
+---
+# Response 
+# The remaining volume UOM is 0.1uL
+int16 holding_volume 
+bool to_replenish

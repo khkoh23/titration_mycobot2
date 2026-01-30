@@ -1,0 +1,19 @@
+# Service for actuating and configuring the syringe pump.
+# Note: Volume is updated only when the command is 71 or 91.
+
+# Request
+# 7: Aspire (Default: 2000uL)
+# 71: Set aspire volume (Default: 20000)
+# 8: Clear syringe
+# 9: Dispense (Default: 20uL)
+# 91: Set dispense volume (Default: 200)
+# 123: Enquire holding_volume
+# 124: Is to replenish syringe?
+int8 command
+uint16 aspire_volume
+uint16 dispense_volume
+---
+# Response 
+# The remaining volume UOM is 0.1uL
+int16 holding_volume 
+bool to_replenish
