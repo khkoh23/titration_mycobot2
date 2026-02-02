@@ -84,24 +84,20 @@
   <widget class="QDialog" name="ChatDialog">
    <property name="windowTitle"><string>AI Assistant</string></property>
    <property name="windowModality"><enum>Qt::ApplicationModal</enum></property>
-   <property name="minimumSize">
-    <size><width>610</width><height>728</height></size>
-   </property>
-   <property name="size">
-    <size><width>650</width><height>1000</height></size>
-   </property>
+   <property name="size"><size><width>610</width><height>1000</height></size></property>
+   <property name="minimumSize"><size><width>610</width><height>728</height></size></property>
    <layout class="QVBoxLayout" name="verticalLayout_chat">
     <item>
      <widget class="QLabel" name="lblPlotImage">
       <property name="minimumSize"><size><width>610</width><height>328</height></size></property>
       <property name="scaledContents"><bool>true</bool></property>
-      <property name="pixmap"><pixmap>/home/er/titration_logs/pH_plot.png</pixmap></property>
      </widget>
     </item>
     <item>
      <widget class="QTextBrowser" name="chatOutput">
       <property name="placeholderText"><string>AI Assistant response will appear here</string></property>
-      <property name="minimumSize"><size><width>610</width><height>600</height></size></property>
+      <property name="size"><size><width>610</width><height>400</height></size></property>
+      <property name="minimumSize"><size><width>610</width><height>400</height></size></property>
      </widget>
     </item>
     <item>
@@ -124,32 +120,18 @@
   <!-- New standalone chatroom dialog -->
   <widget class="QDialog" name="ChatRoomDialog">
    <property name="windowTitle"><string>Chat Room</string></property>
+   <property name="size"><size><width>610</width><height>800</height></size></property>
    <property name="minimumSize"><size><width>600</width><height>500</height></size></property>
-   <property name="size"><size><width>600</width><height>800</height></size></property>
    <layout class="QVBoxLayout" name="verticalLayout_chatroom">
     <item>
      <widget class="QTextBrowser" name="chatRoomOutput">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>5</verstretch>
-       </sizepolicy>
-      </property>
       <property name="minimumSize"><size><width>580</width><height>400</height></size></property>
-      <property name="stretch"><number>8</number></property>
      </widget>
     </item>
     <item>
      <widget class="QTextEdit" name="chatRoomInput">
       <property name="placeholderText"><string>Type a message...</string></property>
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
       <property name="minimumSize"><size><width>580</width><height>50</height></size></property>
-      <property name="stretch"><number>1</number></property>
      </widget>
     </item>
     <item>

@@ -24,6 +24,7 @@ public:
         return {
             BT::InputPort<float>(std::string("criteria_min")),
             BT::InputPort<float>(std::string("criteria_max")),
+            BT::InputPort<std::string>("editable"),
         }; 
     }
 

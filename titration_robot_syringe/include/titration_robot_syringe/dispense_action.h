@@ -58,6 +58,7 @@ public:
 
     static BT::PortsList providedPorts() {
         return {
+            BT::InputPort<std::string>("editable")
         };
     }
 

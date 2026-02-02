@@ -7,6 +7,7 @@ import requests
 import time
 import json
 import docker
+import uuid
 from datetime import datetime
 from markdown import markdown
 
@@ -39,7 +40,7 @@ table, th, td {{
 
 # Qt / UI
 try:
-    from PySide2 import QtWidgets, QtCore, QtUiTools
+    from PySide2 import QtWidgets, QtCore, QtUiTools, QtGui
 except ImportError as e:
     print("ERROR: PySide2/QtUiTools not available. Install with: pip install PySide2 pyqtgraph")
     raise
@@ -73,6 +74,8 @@ class TitrationUiNode(Node):
     def __init__(self, bridge: RosBridge):
         super().__init__('syringe_ui')
         self.bridge = bridge
+        self.csv_data = None
+        self.session_id = None
 
         # Parameters
         self.declare_parameter('log_rate_hz', 5.0)
@@ -130,6 +133,8 @@ class TitrationUiNode(Node):
 
     # --- Logging control ---
     def start_saving(self):
+        self.session_id = str(uuid.uuid4())
+        self.get_logger().info('Start new session ' + self.session_id)
         with self._log_lock:
             if self._saving_enabled:
                 return
@@ -139,17 +144,25 @@ class TitrationUiNode(Node):
             self._csv_file = open(filepath, mode='w', newline='')
             self._csv_writer = csv.writer(self._csv_file)
             self._csv_writer.writerow(['Time', 'pH', 'Temperature', 'Titration volume'])
-            self._saving_enabled = True                        
-
+            self._saving_enabled = True
+            
     # perform HTTP request off the main/thread timer to avoid blocking UI or timers
     def _seek_llm_feedback(self):
         URL = f"http://{bridge_ip}:5000/chat/assistant"
         PAYLOAD = {
-            "messages": "list out 3 key findings of titration experiment."
-                        "suggest top 3 important parameters in the XML behaviour tree for fine tuning."
-                        "Give the suggestion in table format with columns: Parameter, Description, Suggested Value, center aligned."
-                        "Keep the answer consise. No need to provide further action.",
-            "session_id": "5dee742c-4e86-4152-a1c8-a145806b3091"
+            "messages": "You are an expert in both chemistry and robotics. You are guiding a group of students to use robotic system to perform titration experiment. Be helpful to assist students fine tunning the robotic system for the titration experiment. Based on the experimental analysis, draft around 200 words analysis and suggested improvements of the titration experiment, include explanation of equivalence region. This titration is acid-base neutralization titration used to determine the unknown concentration of sulfuric acid by gradually adding sodium hydroxide. include chemical equation in the comment in markdown format."
+                        "Also, suggest top 3 important parameters in the XML behaviour tree for fine tuning. the parameters has to be in the XML file, don't make up parameters."
+                        "Give the suggestion in table format with columns: Parameter, Description, Suggested Value. Center aligned Text."
+                        "Keep the answer consise. No need to provide further action."
+                        "Output in Markdown format, with the following header. avoid using strikethrough"
+                        "Example Output"
+                        "### Titration experiment analysis"
+                        "{analysis}"
+                        "**Suggested Improvement**"
+                        "{improvement}"
+                        "### XML parameters for fine-tuning"
+                        "{table}",
+            "session_id": self.session_id
         }
         try:
             r = requests.post(URL, json=PAYLOAD, timeout=200)
@@ -166,7 +179,7 @@ class TitrationUiNode(Node):
         URL = f"http://{bridge_ip}:5000/chat/assistant"
         PAYLOAD = {
             "messages": input,
-            "session_id": "5dee742c-4e86-4152-a1c8-a145806b3091"
+            "session_id": self.session_id
         }
         try:
             r = requests.post(URL, json=PAYLOAD, timeout=200)
@@ -194,14 +207,14 @@ class TitrationUiNode(Node):
             self._csv_writer = None
             self._saving_enabled = False
             start_feedback = True
-            self.get_logger().info('Stop logging...')
-
-        if start_feedback:            
+            self.get_logger().info('Stop logging...')                
+        
+        if start_feedback:
             try:
                 self.get_logger().info('Starting background assistant request thread')
+                threading.Thread(target=self._seek_llm_feedback, daemon=True).start()
             except Exception:
                 print('Starting background assistant request thread')
-            threading.Thread(target=self._seek_llm_feedback, daemon=True).start()
 
     def _on_log_tick(self):
         with self._log_lock:
@@ -312,6 +325,7 @@ class UiController(QtCore.QObject):
             # Open the dialog modally when the button is clicked
             if self.btnOpenChat is not None:
                 self.btnOpenChat.clicked.connect(lambda: self.chat_dialog.exec_())
+                self.btnOpenChat.clicked.connect(self._update_image)
         else:
             # Fallback: disable the button if dialog not found
             if self.btnOpenChat is not None:
@@ -392,6 +406,7 @@ class UiController(QtCore.QObject):
                 self._first_message = False
             if getattr(self, 'btnOpenChat', None) is not None:
                 try:
+                    self._update_image()
                     self.btnOpenChat.setText("Open Assistant")
                     self.btnOpenChat.setEnabled(True)
                 except Exception:
@@ -444,6 +459,9 @@ class UiController(QtCore.QObject):
         self.btnStop = must_find(QtWidgets.QPushButton, 'btnStopLogging')
         #self.btnStartPlot = must_find(QtWidgets.QPushButton, 'btnStartPlot')
         self.btnClear = must_find(QtWidgets.QPushButton, 'btnClearPlot')
+        
+        #plot image setup
+        self.plotImage = must_find(QtWidgets.QWidget, 'lblPlotImage')
 
         # Plot setup
         self.plotContainer = must_find(QtWidgets.QWidget, 'plotContainer')
@@ -508,6 +526,12 @@ class UiController(QtCore.QObject):
 
         # Initial size
         self.window.resize(900, 600)
+        
+    # --- plot refresh ---
+    def _update_image(self):
+        plot_pixmap = QtGui.QPixmap("/home/er/analysis/pH_plot.png")
+        self.plotImage.setPixmap(plot_pixmap)
+        self.plotImage.setScaledContents(True)
 
     # --- UI update handlers (lightweight) ---
     def _on_ph_update(self, ph: float):

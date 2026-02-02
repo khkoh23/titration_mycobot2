@@ -1,83 +1,72 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<root BTCPP_format="4"
-      main_tree_to_execute="syringe_equivalence">
-  <BehaviorTree ID="syringe_equivalence">
-    <Sequence>
-      <AlwaysSuccess/>
-      <ReactiveSequence>
-        <Inverter>
-          <CheckPhByRange ph_min="10.01"
-                          ph_max="14.00"/>
-        </Inverter>
-        <RetryUntilSuccessful num_attempts="-1">
-          <Sequence>
-            <RetryUntilSuccessful num_attempts="-1">
-              <IsPhStable delta_min="0.00"
-                          delta_max="0.02"
-                          window_sec="30"
-                          _description="If pH change is within 0.02 in the last 30 seconds, then True."/>
-            </RetryUntilSuccessful>
-            <IfThenElse>
-              <CheckDphDv criteria_min="0.0000"
-                          criteria_max="0.0005"
-                          _description="dpH / dV:&#10;If 0 &lt;= pH change &lt; 0.005 when volume of 10 was added, then True."/>
-              <Sequence>
-                <SetDispenseVolume volume="1200"/>
-                <SetBlackboard value="1500"
-                               output_key="delay"/>
-              </Sequence>
-              <IfThenElse>
-                <CheckDphDv criteria_min="0.0005"
-                            criteria_max="0.0020"
-                            _description="dpH / dV:&#10;If 0.005 &lt;= pH change &lt; 0.02 when volume of 10 was added, then True."/>
-                <Sequence>
-                  <SetDispenseVolume volume="1200"/>
-                  <SetBlackboard value="1500"
-                                 output_key="delay"/>
-                </Sequence>
-                <Sequence>
-                  <SetDispenseVolume volume="1200"/>
-                  <SetBlackboard value="1500"
-                                 output_key="delay"/>
-                </Sequence>
-              </IfThenElse>
-            </IfThenElse>
-            <Delay delay_msec="{delay}">
-              <Dispense/>
-            </Delay>
-            <Delay delay_msec="10000">
-              <AlwaysSuccess/>
-            </Delay>
-          </Sequence>
-        </RetryUntilSuccessful>
-      </ReactiveSequence>
-    </Sequence>
-  </BehaviorTree>
-
-  <!-- Description of Node Models (used by Groot) -->
-  <TreeNodesModel>
-    <Condition ID="CheckDphDv"
-               editable="true">
-      <input_port name="criteria_min"/>
-      <input_port name="criteria_max"/>
-    </Condition>
-    <Condition ID="CheckPhByRange"
-               editable="true">
-      <input_port name="ph_min"/>
-      <input_port name="ph_max"/>
-    </Condition>
-    <Action ID="Dispense"
-            editable="true"/>
-    <Condition ID="IsPhStable"
-               editable="true">
-      <input_port name="delta_min"/>
-      <input_port name="delta_max"/>
-      <input_port name="window_sec"/>
-    </Condition>
-    <Action ID="SetDispenseVolume"
-            editable="true">
-      <input_port name="volume"/>
-    </Action>
-  </TreeNodesModel>
-
+<?xml version="1.0"?>
+<root main_tree_to_execute="syringe_equivalence">
+    <!-- ////////// -->
+    <BehaviorTree ID="syringe_equivalence">
+        <Sequence>
+            <AlwaysSuccess/>
+            <ReactiveSequence>
+                <Inverter>
+                    <Condition ID="CheckPhByRange" editable="" ph_max="14.00" ph_min="10.01"/>
+                </Inverter>
+                <RetryUntilSuccessful num_attempts="-1">
+                    <Sequence>
+                        <RetryUntilSuccessful num_attempts="-1">
+                            <Condition ID="IsPhStable" delta_max="0.02" delta_min="0.00" editable="" window_sec="30"/>
+                        </RetryUntilSuccessful>
+                        <IfThenElse>
+                            <Condition ID="CheckDphDv" criteria_max="0.0005" criteria_min="0.0000" editable=""/>
+                            <Sequence>
+                                <Action ID="SetDispenseVolume" editable="" volume="2000"/>
+                                <SetBlackboard output_key="delay" value="1500"/>
+                            </Sequence>
+                            <IfThenElse>
+                                <Condition ID="CheckDphDv" criteria_max="0.0020" criteria_min="0.0005" editable=""/>
+                                <Sequence>
+                                    <Action ID="SetDispenseVolume" editable="" volume="2000"/>
+                                    <SetBlackboard output_key="delay" value="1500"/>
+                                </Sequence>
+                                <Sequence>
+                                    <Action ID="SetDispenseVolume" editable="" volume="2000"/>
+                                    <SetBlackboard output_key="delay" value="1500"/>
+                                </Sequence>
+                            </IfThenElse>
+                        </IfThenElse>
+                        <Delay delay_msec="{delay}">
+                            <Action ID="Dispense" editable=""/>
+                        </Delay>
+                        <Delay delay_msec="10000">
+                            <AlwaysSuccess/>
+                        </Delay>
+                    </Sequence>
+                </RetryUntilSuccessful>
+            </ReactiveSequence>
+        </Sequence>
+    </BehaviorTree>
+    <!-- ////////// -->
+    <TreeNodesModel>
+        <Condition ID="CheckDphDv">
+            <input_port name="criteria_max"/>
+            <input_port name="criteria_min"/>
+            <inout_port name="editable"/>
+        </Condition>
+        <Condition ID="CheckPhByRange">
+            <inout_port name="editable"/>
+            <input_port name="ph_max"/>
+            <input_port name="ph_min"/>
+        </Condition>
+        <Action ID="Dispense">
+            <inout_port name="editable"/>
+        </Action>
+        <Condition ID="IsPhStable">
+            <input_port name="delta_max"/>
+            <input_port name="delta_min"/>
+            <inout_port name="editable"/>
+            <input_port name="window_sec"/>
+        </Condition>
+        <Action ID="SetDispenseVolume">
+            <inout_port name="editable"/>
+            <input_port name="volume"/>
+        </Action>
+    </TreeNodesModel>
+    <!-- ////////// -->
 </root>

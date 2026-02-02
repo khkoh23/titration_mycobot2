@@ -25,6 +25,7 @@ public:
             BT::InputPort<float>(std::string("delta_min")),
             BT::InputPort<float>(std::string("delta_max")),
             BT::InputPort<unsigned>(std::string("window_sec")),
+            BT::InputPort<std::string>("editable")
         }; 
     }
 

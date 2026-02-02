@@ -64,6 +64,7 @@ public:
     static BT::PortsList providedPorts() {
         return {
             BT::InputPort<unsigned>(std::string("volume")),
+            BT::InputPort<std::string>("editable")
         };
     }
 
