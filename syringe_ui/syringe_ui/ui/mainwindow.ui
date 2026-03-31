@@ -20,6 +20,11 @@
        </widget>
       </item>
       <item>
+       <widget class="QLabel" name="lblORP">
+        <property name="text"><string>ORP: -- mV</string></property>
+       </widget>
+      </item>
+      <item>
        <widget class="QLabel" name="lblVol">
         <property name="text"><string>Volume: --</string></property>
        </widget>

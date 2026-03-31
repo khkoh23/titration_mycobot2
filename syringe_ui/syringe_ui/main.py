@@ -15,7 +15,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor
 
-from std_msgs.msg import Float32, UInt32, Int8
+from std_msgs.msg import Float32, UInt32, Int8, Int16
 from ament_index_python.packages import get_package_share_directory
 
 # obatin docker bridge ip address
@@ -64,6 +64,7 @@ class RosBridge(QtCore.QObject):
     """Qt bridge for thread-safe UI updates from ROS callbacks."""
     ph_changed = QtCore.Signal(float)
     temp_changed = QtCore.Signal(float)
+    orp_changed = QtCore.Signal(int)
     vol_changed = QtCore.Signal(int)
     data_point = QtCore.Signal(float, int)  # (pH, volume)
     chat_response = QtCore.Signal(str)
@@ -101,6 +102,7 @@ class TitrationUiNode(Node):
         self.create_subscription(Float32, '/ph', self._on_ph, 10)
         self.create_subscription(Float32, '/temperature', self._on_temp, 10)
         self.create_subscription(UInt32, '/titration_vol', self._on_vol, 10)
+        self.create_subscription(Int16, '/orp', self._on_orp, 10)
 
         # Logging
         self._saving_enabled = False
@@ -127,6 +129,10 @@ class TitrationUiNode(Node):
         if self.latest_ph is not None:
             self.bridge.data_point.emit(self.latest_ph, int(self.latest_vol))
 
+    def _on_orp(self, msg: Int16):
+        self.latest_orp = int(msg.data)
+        self.bridge.orp_changed.emit(self.latest_orp)
+
     # --- Publisher helpers for buttons ---
     def send_syringe_cmd(self, code: int):
         self.syringe_cmd_pub.publish(Int8(data=int(code)))
@@ -143,25 +149,18 @@ class TitrationUiNode(Node):
             self.get_logger().info(f'Start logging to {filepath}')
             self._csv_file = open(filepath, mode='w', newline='')
             self._csv_writer = csv.writer(self._csv_file)
-            self._csv_writer.writerow(['Time', 'pH', 'Temperature', 'Titration volume'])
+            self._csv_writer.writerow(['Time', 'pH', 'Temperature', 'Titration volume', 'ORP (mV)'])
             self._saving_enabled = True
             
     # perform HTTP request off the main/thread timer to avoid blocking UI or timers
     def _seek_llm_feedback(self):
         URL = f"http://{bridge_ip}:5000/chat/assistant"
         PAYLOAD = {
-            "messages": "You are an expert in both chemistry and robotics. You are guiding a group of students to use robotic system to perform titration experiment. Be helpful to assist students fine tunning the robotic system for the titration experiment. Based on the experimental analysis, draft around 200 words analysis and suggested improvements of the titration experiment, include explanation of equivalence region. This titration is acid-base neutralization titration used to determine the unknown concentration of sulfuric acid by gradually adding sodium hydroxide. include chemical equation in the comment in markdown format."
+            "messages": "You are an expert in both chemistry and robotics. You are guiding a group of students to use robotic system to perform titration experiment. Be helpful to assist students fine tunning the robotic system for the titration experiment. Based on the experimental analysis, draft around 200 words analysis and suggested improvements of the titration experiment, include explanation of equivalence region. This titration is acid-base neutralization titration used to determine the unknown concentration of hydrochloric acid by gradually adding sodium hydroxide. include chemical equation in the comment in markdown format."
                         "Also, suggest top 3 important parameters in the XML behaviour tree for fine tuning. the parameters has to be in the XML file, don't make up parameters."
                         "Give the suggestion in table format with columns: Parameter, Description, Suggested Value. Center aligned Text."
                         "Keep the answer consise. No need to provide further action."
-                        "Output in Markdown format, with the following header. avoid using strikethrough"
-                        "Example Output"
-                        "### Titration experiment analysis"
-                        "{analysis}"
-                        "**Suggested Improvement**"
-                        "{improvement}"
-                        "### XML parameters for fine-tuning"
-                        "{table}",
+                        "Output in Markdown format, with the following header. avoid using strikethrough",
             "session_id": self.session_id
         }
         try:
@@ -221,10 +220,11 @@ class TitrationUiNode(Node):
             if not self._saving_enabled or self._csv_writer is None:
                 return
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-            ph = '' if self.latest_ph is None else f'{self.latest_ph:.3f}'
-            temp = '' if self.latest_temp is None else f'{self.latest_temp:.3f}'
+            ph = '' if self.latest_ph is None else f'{self.latest_ph:.2f}'
+            temp = '' if self.latest_temp is None else f'{self.latest_temp:.1f}'
             vol = '' if self.latest_vol is None else str(int(self.latest_vol))
-            self._csv_writer.writerow([now_str, ph, temp, vol])
+            orp = '' if self.latest_orp is None else str(int(self.latest_orp))
+            self._csv_writer.writerow([now_str, ph, temp, vol, orp])
 
     # --- Cleanup ---
     def destroy_node(self):
@@ -450,6 +450,7 @@ class UiController(QtCore.QObject):
         # Widgets
         self.lblPH = must_find(QtWidgets.QLabel, 'lblPH')
         self.lblTemp = must_find(QtWidgets.QLabel, 'lblTemp')
+        self.lblORP = must_find(QtWidgets.QLabel, 'lblORP')
         self.lblVol = must_find(QtWidgets.QLabel, 'lblVol')
 
         self.btnAspire = must_find(QtWidgets.QPushButton, 'btnAspire')
@@ -508,6 +509,7 @@ class UiController(QtCore.QObject):
         # Connect signals for real-time updates
         self.bridge.ph_changed.connect(self._on_ph_update)
         self.bridge.temp_changed.connect(self._on_temp_update)
+        self.bridge.orp_changed.connect(self._on_orp_update)
         self.bridge.vol_changed.connect(self._on_vol_update)
         self.bridge.data_point.connect(self._on_data_point)
 
@@ -536,7 +538,7 @@ class UiController(QtCore.QObject):
     # --- UI update handlers (lightweight) ---
     def _on_ph_update(self, ph: float):
         # Update label
-        self.lblPH.setText(f'pH: {ph:.3f}')
+        self.lblPH.setText(f'pH: {ph:.2f}')
 
         # If plotting enabled, append a point using latest volume
         if not self._plotting_enabled:
@@ -558,7 +560,10 @@ class UiController(QtCore.QObject):
         # Redraw happens in _plot_refresh
 
     def _on_temp_update(self, temp: float):
-        self.lblTemp.setText(f'Temperature: {temp:.3f} °C')
+        self.lblTemp.setText(f'Temperature: {temp:.1f} °C')
+    
+    def _on_orp_update(self, orp: int):
+        self.lblORP.setText(f'ORP: {orp:.0f} mV')
 
     def _on_vol_update(self, vol: int):
         self.lblVol.setText(f'Volume: {vol}')
