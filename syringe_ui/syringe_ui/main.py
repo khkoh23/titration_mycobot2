@@ -94,6 +94,7 @@ class TitrationUiNode(Node):
         self.latest_ph = None
         self.latest_temp = None
         self.latest_vol = 0
+        self.latest_orp = None
 
         # Publishers
         self.syringe_cmd_pub = self.create_publisher(Int8, '/syringe_cmd', 10)
@@ -481,7 +482,8 @@ class UiController(QtCore.QObject):
         self.plot.setYRange(0.0, 14.0)
         self.plot.setXRange(0, 1)
 
-        self.plot_curve = self.plot.plot([], [], pen=pg.mkPen(color=(0, 120, 255), width=2))
+#        self.plot_curve = self.plot.plot([], [], pen=pg.mkPen(color='#1f77b4', width=2), name='pH')
+        self.plot_curve = self.plot.plot([], [], pen=None, symbol='o', symbolSize=6, symbolBrush=pg.mkBrush('#1f77b4'), symbolPen=pg.mkPen('#1f77b4'), name='pH')
         # Performance options (guard for older pyqtgraph)
         try:
             self.plot_curve.setDownsampling(auto=True, method='largest')
@@ -489,13 +491,46 @@ class UiController(QtCore.QObject):
         except Exception:
             pass
 
+        self.right_vb = pg.ViewBox()
+        self.plot.showAxis('right')
+        self.plot.getAxis('right').setLabel('ORP (mV)')
+        try:
+            self.plot.getAxis('left').setPen(pg.mkPen('#1f77b4'))
+            self.plot.getAxis('right').setPen(pg.mkPen('#d62728'))
+        except Exception:
+            pass
+
+        self.plot.scene().addItem(self.right_vb)
+        self.plot.getAxis('right').linkToView(self.right_vb)
+        self.right_vb.setXLink(self.plot)
+
+#        self.orp_curve = pg.PlotDataItem(pen=pg.mkPen('#d62728', width=2, style=QtCore.Qt.DashLine), name='ORP')
+        self.orp_curve = pg.PlotDataItem(pen=None, symbol='t', symbolSize=6, symbolBrush=pg.mkBrush('#d62728'), symbolPen=pg.mkPen('#d62728'), name='ORP')
+        self.right_vb.addItem(self.orp_curve)
+
+        def _update_right_view():
+            self.right_vb.setGeometry(self.plot.getViewBox().sceneBoundingRect())
+            self.right_vb.linkedViewChanged(self.plot.getViewBox(), self.right_vb.XAxis)
+        
+        _update_right_view()
+        self.plot.getViewBox().sigResized.connect(_update_right_view)
+
+        self.legend = self.plot.addLegend()
+        self.legend.addItem(self.plot_curve, 'pH')
+        self.legend.addItem(self.orp_curve, 'ORP')
+
         # Buffers
         if USE_NUMPY:
             self.x_data = np.empty(0, dtype=np.uint32)
             self.y_data = np.empty(0, dtype=np.float32)
+            self.x2_data = np.empty(0, dtype=np.uint32)
+            self.y2_data = np.empty(0, dtype=np.int16)
         else:
             self.x_data = []
             self.y_data = []
+            self.x2_data = []
+            self.y2_data = []
+
         self.max_vol_seen = 1
         self._last_plotted_vol = None
 
@@ -564,6 +599,17 @@ class UiController(QtCore.QObject):
     
     def _on_orp_update(self, orp: int):
         self.lblORP.setText(f'ORP: {orp:.0f} mV')
+        if not self._plotting_enabled:
+            return
+        vol = self.node.latest_vol
+        if vol is None:
+            return
+        if USE_NUMPY:
+            self.x2_data = np.append(self.x2_data, np.uint32(vol))
+            self.y2_data = np.append(self.y2_data, np.int16(orp))
+        else:
+            self.x2_data.append(int(vol))
+            self.y2_data.append(int(orp))
 
     def _on_vol_update(self, vol: int):
         self.lblVol.setText(f'Volume: {vol}')
@@ -598,6 +644,14 @@ class UiController(QtCore.QObject):
             else:
                 self.x_data.append(int(vol))
                 self.y_data.append(float(ph))
+            orp = self.node.latest_orp
+            if orp is not None:
+                if USE_NUMPY:
+                    self.x2_data = np.append(self.x2_data, np.uint32(vol))
+                    self.y2_data = np.append(self.y2_data, np.int15(orp))
+                else:
+                    self.x2_data.append(int(vol))
+                    self.y2_data.append(int(orp))
             self._last_plotted_vol = vol
         # Redraw happens in _plot_refresh
 
@@ -630,8 +684,26 @@ class UiController(QtCore.QObject):
             except Exception:
                 self.plot_curve.setData(self.x_data, self.y_data)
 
+        length2 = (self.x2_data.size if USE_NUMPY else len(self.x2_data))
+        if length2 > 0:
+            if USE_NUMPY:
+                self.orp_curve.setData(self.x2_data, self.y2_data)
+            else:
+                try:
+                    x2_np = np.asarray(self.x2_data, dtype=np.uint32)
+                    y2_np = np.asarray(self.y2_data, dtype=np.int16)
+                    self.orp_curve.setData(x2_np, y2_np)
+                except Exception:
+                    self.orp_curve.setData(self.x2_data, self.y2_data)
+
         # Maintain X range from 0..max volume seen
         self.plot.setXRange(0, max(int(self.max_vol_seen), 1), padding=0.02)
+
+        try:
+            self.right_vb.enableAutoRange(axis=pg.ViewBox.YAxis, enable=True)
+ #           self.right_vb.setYRange(-500, 500, padding=0.05)
+        except Exception:
+            pass
 
     def _start_plot(self):
         # Enable plotting; do not backfill historical data automatically
@@ -643,12 +715,20 @@ class UiController(QtCore.QObject):
         if USE_NUMPY:
             self.x_data = np.empty(0, dtype=np.uint32)
             self.y_data = np.empty(0, dtype=np.float32)
+            self.x2_data = np.empty(0, dtype=np.uint32)
+            self.y2_data = np.empty(0, dtype=np.int16)
         else:
             self.x_data = []
             self.y_data = []
+            self.x2_data = []
+            self.y2_data = []
         self.max_vol_seen = 1
         self._last_plotted_vol = None
         self.plot_curve.setData([], [])
+        try:
+            self.orp_curve.setData([], [])
+        except Exception:
+            pass
         self.plot.setXRange(0, 1, padding=0.02)
 
     # Helpers to avoid accidental button-text changes from other handlers
